@@ -213,6 +213,7 @@ func NewLoadBalancerController(input NewLoadBalancerControllerInput) *LoadBalanc
 		globalConfigurationValidator: input.GlobalConfigurationValidator,
 		transportServerValidator:     input.TransportServerValidator,
 		internalRoutesEnabled:        input.InternalRoutesEnabled,
+		isPrometheusEnabled:          input.isPrometheusEnabled,
 		isLatencyMetricsEnabled:      input.IsLatencyMetricsEnabled,
 	}
 
@@ -1883,7 +1884,7 @@ func (lbc *LoadBalancerController) createIngressEx(ing *networking.Ingress, vali
 			}
 		}
 
-		if lbc.isNginxPlus || lbc.isLatencyMetricsEnabled {
+		if lbc.isNginxPlus || (lbc.isPrometheusEnabled && lbc.isLatencyMetricsEnabled) {
 			for _, endpoint := range podEndps {
 				ingEx.PodsByIP[endpoint.Address] = configs.PodInfo{
 					Name:         endpoint.PodName,
@@ -2073,7 +2074,7 @@ func (lbc *LoadBalancerController) createVirtualServerEx(virtualServer *conf_v1.
 		endps := getIPAddressesFromEndpoints(podEndps)
 		endpoints[endpointsKey] = endps
 
-		if lbc.isNginxPlus || lbc.isLatencyMetricsEnabled {
+		if lbc.isNginxPlus || (lbc.isPrometheusEnabled && lbc.isLatencyMetricsEnabled) {
 			for _, endpoint := range podEndps {
 				podsByIP[endpoint.Address] = configs.PodInfo{
 					Name:         endpoint.PodName,
@@ -2327,7 +2328,7 @@ func (lbc *LoadBalancerController) createTransportServer(transportServer *conf_v
 		endps := getIPAddressesFromEndpoints(podEndps)
 		endpoints[endpointsKey] = endps
 
-		if lbc.isNginxPlus {
+		if lbc.isNginxPlus && lbc.isPrometheusEnabled {
 			for _, endpoint := range podEndps {
 				podsByIP[endpoint.Address] = configs.PodInfo{
 					Name: endpoint.PodName,

@@ -614,6 +614,7 @@ func main() {
 		VirtualServerValidator:       virtualServerValidator,
 		SpireAgentAddress:            *spireAgentAddress,
 		InternalRoutesEnabled:        *enableInternalRoutes,
+		IsPrometheusEnabled:          *enablePrometheusMetrics,
 		IsLatencyMetricsEnabled:      *enableLatencyMetrics,
 	}
 
