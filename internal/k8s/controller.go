@@ -152,6 +152,7 @@ type LoadBalancerController struct {
 	internalRoutesEnabled         bool
 	syncLock                      sync.Mutex
 	isNginxReady                  bool
+	isPrometheusEnabled           bool
 	isLatencyMetricsEnabled       bool
 	configuration                 *Configuration
 }
@@ -186,6 +187,7 @@ type NewLoadBalancerControllerInput struct {
 	VirtualServerValidator       *validation.VirtualServerValidator
 	SpireAgentAddress            string
 	InternalRoutesEnabled        bool
+	IsPrometheusEnabled          bool
 	IsLatencyMetricsEnabled      bool
 }
 
@@ -213,7 +215,7 @@ func NewLoadBalancerController(input NewLoadBalancerControllerInput) *LoadBalanc
 		globalConfigurationValidator: input.GlobalConfigurationValidator,
 		transportServerValidator:     input.TransportServerValidator,
 		internalRoutesEnabled:        input.InternalRoutesEnabled,
-		isPrometheusEnabled:          input.isPrometheusEnabled,
+		isPrometheusEnabled:          input.IsPrometheusEnabled,
 		isLatencyMetricsEnabled:      input.IsLatencyMetricsEnabled,
 	}
 

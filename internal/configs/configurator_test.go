@@ -1080,7 +1080,7 @@ func TestUpdateTransportServerMetricsLabels(t *testing.T) {
 		serverZoneLabels:               make(map[string][]string),
 	}
 
-	cnf.updateTransportServerMetricsLabels(tsEx, StreamUpstreams)
+	cnf.updateTransportServerMetricsLabels(tsEx, streamUpstreams)
 	if !reflect.DeepEqual(cnf.labelUpdater, expectedLabelUpdater) {
 		t.Errorf("updateTransportServerMetricsLabels() updated labels to \n%+v but expected \n%+v", cnf.labelUpdater, expectedLabelUpdater)
 	}
