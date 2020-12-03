@@ -104,7 +104,7 @@ func TestGenerateTransportServerConfigForTCP(t *testing.T) {
 					},
 				},
 				UpstreamLabels: version2.UpstreamLabels{
-					ResourceName:      "tcp-app",
+					ResourceName:      "tcp-server",
 					ResourceType:      "transportserver",
 					ResourceNamespace: "default",
 					Service:           "tcp-app-svc",
@@ -178,7 +178,7 @@ func TestGenerateTransportServerConfigForUDP(t *testing.T) {
 					},
 				},
 				UpstreamLabels: version2.UpstreamLabels{
-					ResourceName:      "udp-app",
+					ResourceName:      "udp-server",
 					ResourceType:      "transportserver",
 					ResourceNamespace: "default",
 					Service:           "udp-app-svc",

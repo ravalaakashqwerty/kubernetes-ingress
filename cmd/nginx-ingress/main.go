@@ -547,14 +547,14 @@ func main() {
 	syslogListener = metrics.NewSyslogFakeServer()
 	if *enablePrometheusMetrics {
 		upstreamServerVariableLabels := []string{"service", "resource_type", "resource_name", "resource_namespace"}
-		streamUpstreamServerVariableLabels := []string{"service", "resource_type", "resource_name", "resource_namespace"}
 		upstreamServerPeerVariableLabelNames := []string{"pod_name"}
-		streamUpstreamServerPeerVariableLabelNames := []string{"pod_name"}
 		if staticCfgParams.NginxServiceMesh {
 			upstreamServerPeerVariableLabelNames = append(upstreamServerPeerVariableLabelNames, "pod_owner")
-			streamUpstreamServerPeerVariableLabelNames = append(streamUpstreamServerPeerVariableLabelNames, "pod_owner")
 		}
 		if *nginxPlus {
+			streamUpstreamServerVariableLabels := []string{"service", "resource_type", "resource_name", "resource_namespace"}
+			streamUpstreamServerPeerVariableLabelNames := []string{"pod_name"}
+
 			serverZoneVariableLabels := []string{"resource_type", "resource_name", "resource_namespace"}
 			streamServerZoneVariableLabels := []string{"resource_type", "resource_name", "resource_namespace"}
 			variableLabelNames := nginxCollector.NewVariableLabelNames(upstreamServerVariableLabels, serverZoneVariableLabels, upstreamServerPeerVariableLabelNames,

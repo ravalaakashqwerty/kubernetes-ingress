@@ -2327,11 +2327,10 @@ func (lbc *LoadBalancerController) createTransportServer(transportServer *conf_v
 		endps := getIPAddressesFromEndpoints(podEndps)
 		endpoints[endpointsKey] = endps
 
-		if lbc.isNginxPlus || lbc.isLatencyMetricsEnabled {
+		if lbc.isNginxPlus {
 			for _, endpoint := range podEndps {
 				podsByIP[endpoint.Address] = configs.PodInfo{
-					Name:         endpoint.PodName,
-					MeshPodOwner: endpoint.MeshPodOwner,
+					Name: endpoint.PodName,
 				}
 			}
 		}

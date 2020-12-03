@@ -487,11 +487,6 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 			labelKey := fmt.Sprintf("%v/%v", u.Name, server.Address)
 			upstreamServerPeerLabels[labelKey] = []string{podInfo.Name}
 
-			if cnf.staticCfgParams.NginxServiceMesh {
-				ownerLabelVal := fmt.Sprintf("%s/%s", podInfo.OwnerType, podInfo.OwnerName)
-				upstreamServerPeerLabels[labelKey] = append(upstreamServerPeerLabels[labelKey], ownerLabelVal)
-			}
-
 			newPeers[labelKey] = true
 			newPeersIPs = append(newPeersIPs, labelKey)
 		}
@@ -501,15 +496,9 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 
 	removedPeers := findRemovedKeys(cnf.metricLabelsIndex.transportServerUpstreamPeers[key], newPeers)
 	cnf.metricLabelsIndex.transportServerUpstreamPeers[key] = newPeersIPs
-	cnf.latencyCollector.UpdateUpstreamServerPeerLabels(upstreamServerPeerLabels)
-	cnf.latencyCollector.DeleteUpstreamServerPeerLabels(removedPeers)
 
 	removedUpstreams := findRemovedKeys(cnf.metricLabelsIndex.transportServerUpstreams[key], newUpstreams)
-	cnf.latencyCollector.UpdateUpstreamServerLabels(labels)
 	cnf.metricLabelsIndex.transportServerUpstreams[key] = newUpstreamsNames
-
-	cnf.latencyCollector.DeleteUpstreamServerLabels(removedUpstreams)
-	cnf.latencyCollector.DeleteMetrics(removedPeers)
 
 	if cnf.isPlus {
 		cnf.labelUpdater.UpdateStreamUpstreamServerPeerLabels(upstreamServerPeerLabels)
@@ -519,12 +508,12 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 
 		streamServerZoneLabels := make(map[string][]string)
 		newZones := make(map[string]bool)
-		newZonesNames := []string{transportServerEx.TransportServer.Name}
+		newZonesNames := []string{transportServerEx.TransportServer.Spec.Host}
 
-		streamServerZoneLabels[transportServerEx.TransportServer.Name] = createStreamServerZoneLabels(
+		streamServerZoneLabels[transportServerEx.TransportServer.Spec.Host] = createStreamServerZoneLabels(
 			"transportserver", transportServerEx.TransportServer.Name, transportServerEx.TransportServer.Namespace)
 
-		newZones[transportServerEx.TransportServer.Name] = true
+		newZones[transportServerEx.TransportServer.Spec.Host] = true
 		removedZones := findRemovedKeys(cnf.metricLabelsIndex.transportServerServerZones[key], newZones)
 		cnf.metricLabelsIndex.transportServerServerZones[key] = newZonesNames
 		cnf.labelUpdater.UpdateStreamServerZoneLabels(streamServerZoneLabels)
@@ -533,15 +522,10 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 }
 
 func (cnf *Configurator) deleteTransportServerMetricsLabels(key string) {
-	cnf.latencyCollector.DeleteUpstreamServerLabels(cnf.metricLabelsIndex.transportServerUpstreams[key])
-	cnf.latencyCollector.DeleteUpstreamServerPeerLabels(cnf.metricLabelsIndex.transportServerUpstreamPeers[key])
-	cnf.latencyCollector.DeleteMetrics(cnf.metricLabelsIndex.transportServerUpstreamPeers[key])
 
-	if cnf.isPlus {
-		cnf.labelUpdater.DeleteUpstreamServerLabels(cnf.metricLabelsIndex.transportServerUpstreams[key])
-		cnf.labelUpdater.DeleteServerZoneLabels(cnf.metricLabelsIndex.transportServerServerZones[key])
-		cnf.labelUpdater.DeleteUpstreamServerPeerLabels(cnf.metricLabelsIndex.transportServerUpstreamPeers[key])
-	}
+	cnf.labelUpdater.DeleteStreamUpstreamServerLabels(cnf.metricLabelsIndex.transportServerUpstreams[key])
+	cnf.labelUpdater.DeleteStreamServerZoneLabels(cnf.metricLabelsIndex.transportServerServerZones[key])
+	cnf.labelUpdater.DeleteStreamUpstreamServerPeerLabels(cnf.metricLabelsIndex.transportServerUpstreamPeers[key])
 
 	delete(cnf.metricLabelsIndex.transportServerUpstreams, key)
 	delete(cnf.metricLabelsIndex.transportServerServerZones, key)
@@ -574,7 +558,7 @@ func (cnf *Configurator) addOrUpdateTransportServer(transportServerEx *Transport
 		return fmt.Errorf("Error generating TransportServer config %v: %v", name, err)
 	}
 
-	if (cnf.isPlus && cnf.isPrometheusEnabled) || cnf.isLatencyMetricsEnabled {
+	if cnf.isPlus && cnf.isPrometheusEnabled {
 		cnf.updateTransportServerMetricsLabels(transportServerEx, tsCfg.Upstreams)
 	}
 
@@ -942,6 +926,9 @@ func (cnf *Configurator) DeleteTransportServer(key string) error {
 	err = cnf.nginxManager.Reload(nginx.ReloadForOtherUpdate)
 	if err != nil {
 		return fmt.Errorf("Error when removing TransportServer %v: %v", key, err)
+	}
+	if cnf.isPlus && cnf.isPrometheusEnabled {
+		cnf.deleteTransportServerMetricsLabels(fmt.Sprintf(key))
 	}
 
 	return nil

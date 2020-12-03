@@ -79,7 +79,7 @@ func generateStreamUpstreams(transportServerEx *TransportServerEx, upstreamNamer
 
 		ups.UpstreamLabels.Service = u.Service
 		ups.UpstreamLabels.ResourceType = "transportserver"
-		ups.UpstreamLabels.ResourceName = u.Name
+		ups.UpstreamLabels.ResourceName = transportServerEx.TransportServer.Name
 		ups.UpstreamLabels.ResourceNamespace = transportServerEx.TransportServer.Namespace
 
 		upstreams = append(upstreams, ups)

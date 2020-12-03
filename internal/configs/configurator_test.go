@@ -512,7 +512,8 @@ type mockLabelUpdater struct {
 	serverZoneLabels               map[string][]string
 	upstreamServerPeerLabels       map[string][]string
 	streamUpstreamServerPeerLabels map[string][]string
-	streamUpstreamServerLabel      map[string][]string
+	streamUpstreamServerLabels     map[string][]string
+	streamServerZoneLabels         map[string][]string
 }
 
 func newFakeLabelUpdater() *mockLabelUpdater {
@@ -521,7 +522,8 @@ func newFakeLabelUpdater() *mockLabelUpdater {
 		serverZoneLabels:               make(map[string][]string),
 		upstreamServerPeerLabels:       make(map[string][]string),
 		streamUpstreamServerPeerLabels: make(map[string][]string),
-		streamUpstreamServerLabel:      make(map[string][]string),
+		streamUpstreamServerLabels:     make(map[string][]string),
+		streamServerZoneLabels:         make(map[string][]string),
 	}
 }
 
@@ -570,14 +572,14 @@ func (u *mockLabelUpdater) DeleteUpstreamServerLabels(upstreamNames []string) {
 // UpdateUpstreamServerLabels updates the Upstream Server Labels
 func (u *mockLabelUpdater) UpdateStreamUpstreamServerLabels(streamUpstreamServerLabelValues map[string][]string) {
 	for k, v := range streamUpstreamServerLabelValues {
-		u.streamUpstreamServerLabel[k] = v
+		u.streamUpstreamServerLabels[k] = v
 	}
 }
 
 // DeleteStreamUpstreamServerLabels deletes the Steam Upstream Server Labels
 func (u *mockLabelUpdater) DeleteStreamUpstreamServerLabels(streamUpstreamNames []string) {
 	for _, k := range streamUpstreamNames {
-		delete(u.streamUpstreamServerLabel, k)
+		delete(u.streamUpstreamServerLabels, k)
 	}
 }
 
@@ -598,14 +600,14 @@ func (u *mockLabelUpdater) DeleteServerZoneLabels(zoneNames []string) {
 // UpdateStreamServerZoneLabels updates the Server Zone Labels
 func (u *mockLabelUpdater) UpdateStreamServerZoneLabels(streamServerZoneLabelValues map[string][]string) {
 	for k, v := range streamServerZoneLabelValues {
-		u.serverZoneLabels[k] = v
+		u.streamServerZoneLabels[k] = v
 	}
 }
 
 // DeleteStreamServerZoneLabels deletes the Server Zone Labels
 func (u *mockLabelUpdater) DeleteStreamServerZoneLabels(zoneNames []string) {
 	for _, k := range zoneNames {
-		delete(u.serverZoneLabels, k)
+		delete(u.streamServerZoneLabels, k)
 	}
 }
 
@@ -739,7 +741,8 @@ func TestUpdateIngressMetricsLabels(t *testing.T) {
 		},
 		upstreamServerPeerLabels:       upstreamServerPeerLabels,
 		streamUpstreamServerPeerLabels: make(map[string][]string),
-		streamUpstreamServerLabel:      make(map[string][]string),
+		streamUpstreamServerLabels:     make(map[string][]string),
+		streamServerZoneLabels:         make(map[string][]string),
 	}
 	expectedLatencyCollector := &mockLatencyCollector{
 		upstreamServerLabels:     upstreamServerLabels,
@@ -788,7 +791,8 @@ func TestUpdateIngressMetricsLabels(t *testing.T) {
 		},
 		upstreamServerPeerLabels:       upstreamServerPeerLabels,
 		streamUpstreamServerPeerLabels: make(map[string][]string),
-		streamUpstreamServerLabel:      make(map[string][]string),
+		streamUpstreamServerLabels:     make(map[string][]string),
+		streamServerZoneLabels:         map[string][]string{},
 	}
 	expectedLatencyCollector = &mockLatencyCollector{
 		upstreamServerLabels:        upstreamServerLabels,
@@ -813,7 +817,8 @@ func TestUpdateIngressMetricsLabels(t *testing.T) {
 		serverZoneLabels:               map[string][]string{},
 		upstreamServerPeerLabels:       map[string][]string{},
 		streamUpstreamServerPeerLabels: map[string][]string{},
-		streamUpstreamServerLabel:      map[string][]string{},
+		streamUpstreamServerLabels:     map[string][]string{},
+		streamServerZoneLabels:         map[string][]string{},
 	}
 	expectedLatencyCollector = &mockLatencyCollector{
 		upstreamServerLabels:        upstreamServerLabels,
@@ -906,7 +911,8 @@ func TestUpdateVirtualServerMetricsLabels(t *testing.T) {
 		},
 		upstreamServerPeerLabels:       upstreamServerPeerLabels,
 		streamUpstreamServerPeerLabels: map[string][]string{},
-		streamUpstreamServerLabel:      map[string][]string{},
+		streamUpstreamServerLabels:     map[string][]string{},
+		streamServerZoneLabels:         map[string][]string{},
 	}
 
 	expectedLatencyCollector := &mockLatencyCollector{
@@ -954,7 +960,8 @@ func TestUpdateVirtualServerMetricsLabels(t *testing.T) {
 		},
 		upstreamServerPeerLabels:       upstreamServerPeerLabels,
 		streamUpstreamServerPeerLabels: map[string][]string{},
-		streamUpstreamServerLabel:      map[string][]string{},
+		streamUpstreamServerLabels:     map[string][]string{},
+		streamServerZoneLabels:         map[string][]string{},
 	}
 
 	expectedLatencyCollector = &mockLatencyCollector{
@@ -977,7 +984,8 @@ func TestUpdateVirtualServerMetricsLabels(t *testing.T) {
 		serverZoneLabels:               map[string][]string{},
 		upstreamServerPeerLabels:       map[string][]string{},
 		streamUpstreamServerPeerLabels: map[string][]string{},
-		streamUpstreamServerLabel:      map[string][]string{},
+		streamUpstreamServerLabels:     map[string][]string{},
+		streamServerZoneLabels:         map[string][]string{},
 	}
 
 	expectedLatencyCollector = &mockLatencyCollector{
@@ -994,5 +1002,144 @@ func TestUpdateVirtualServerMetricsLabels(t *testing.T) {
 
 	if !reflect.DeepEqual(testLatencyCollector, expectedLatencyCollector) {
 		t.Errorf("updateVirtualServerMetricsLabels() updated latency collector's labels to \n%+v but expected \n%+v", testLatencyCollector, expectedLatencyCollector)
+	}
+}
+
+func TestUpdateTransportServerMetricsLabels(t *testing.T) {
+	cnf, err := createTestConfigurator()
+	if err != nil {
+		t.Fatalf("Failed to create a test configurator: %v", err)
+	}
+
+	cnf.isPlus = true
+	cnf.labelUpdater = newFakeLabelUpdater()
+
+	tsEx := &TransportServerEx{
+		TransportServer: &conf_v1alpha1.TransportServer{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name:      "test-transportserver",
+				Namespace: "default",
+			},
+			Spec: conf_v1alpha1.TransportServerSpec{
+				Host: "example.com",
+			},
+		},
+		PodsByIP: map[string]PodInfo{
+			"10.0.0.1:80": {Name: "pod-1"},
+			"10.0.0.2:80": {Name: "pod-2"},
+		},
+	}
+
+	streamUpstreams := []version2.StreamUpstream{
+		{
+			Name: "upstream-1",
+			Servers: []version2.StreamUpstreamServer{
+				{
+					Address: "10.0.0.1:80",
+				},
+			},
+			UpstreamLabels: version2.UpstreamLabels{
+				Service:           "service-1",
+				ResourceType:      "transportserver",
+				ResourceName:      tsEx.TransportServer.Name,
+				ResourceNamespace: tsEx.TransportServer.Namespace,
+			},
+		},
+		{
+			Name: "upstream-2",
+			Servers: []version2.StreamUpstreamServer{
+				{
+					Address: "10.0.0.2:80",
+				},
+			},
+			UpstreamLabels: version2.UpstreamLabels{
+				Service:           "service-2",
+				ResourceType:      "transportserver",
+				ResourceName:      tsEx.TransportServer.Name,
+				ResourceNamespace: tsEx.TransportServer.Namespace,
+			},
+		},
+	}
+
+	streamUpstreamServerLabels := map[string][]string{
+		"upstream-1": {"service-1", "transportserver", "test-transportserver", "default"},
+		"upstream-2": {"service-2", "transportserver", "test-transportserver", "default"},
+	}
+	streamUpstreamServerPeerLabels := map[string][]string{
+		"upstream-1/10.0.0.1:80": {"pod-1"},
+		"upstream-2/10.0.0.2:80": {"pod-2"},
+	}
+	expectedLabelUpdater := &mockLabelUpdater{
+		streamUpstreamServerLabels: streamUpstreamServerLabels,
+		streamServerZoneLabels: map[string][]string{
+			"example.com": {"transportserver", "test-transportserver", "default"},
+		},
+		streamUpstreamServerPeerLabels: streamUpstreamServerPeerLabels,
+		upstreamServerPeerLabels:       make(map[string][]string),
+		upstreamServerLabels:           make(map[string][]string),
+		serverZoneLabels:               make(map[string][]string),
+	}
+
+	cnf.updateTransportServerMetricsLabels(tsEx, StreamUpstreams)
+	if !reflect.DeepEqual(cnf.labelUpdater, expectedLabelUpdater) {
+		t.Errorf("updateTransportServerMetricsLabels() updated labels to \n%+v but expected \n%+v", cnf.labelUpdater, expectedLabelUpdater)
+	}
+
+	updatedStreamUpstreams := []version2.StreamUpstream{
+		{
+			Name: "upstream-1",
+			Servers: []version2.StreamUpstreamServer{
+				{
+					Address: "10.0.0.1:80",
+				},
+			},
+			UpstreamLabels: version2.UpstreamLabels{
+				Service:           "service-1",
+				ResourceType:      "transportserver",
+				ResourceName:      tsEx.TransportServer.Name,
+				ResourceNamespace: tsEx.TransportServer.Namespace,
+			},
+		},
+	}
+
+	streamUpstreamServerLabels = map[string][]string{
+		"upstream-1": {"service-1", "transportserver", "test-transportserver", "default"},
+	}
+
+	streamUpstreamServerPeerLabels = map[string][]string{
+		"upstream-1/10.0.0.1:80": {"pod-1"},
+	}
+
+	expectedLabelUpdater = &mockLabelUpdater{
+		streamUpstreamServerLabels: streamUpstreamServerLabels,
+		streamServerZoneLabels: map[string][]string{
+			"example.com": {"transportserver", "test-transportserver", "default"},
+		},
+		streamUpstreamServerPeerLabels: streamUpstreamServerPeerLabels,
+		upstreamServerPeerLabels:       map[string][]string{},
+		upstreamServerLabels:           map[string][]string{},
+		serverZoneLabels:               map[string][]string{},
+	}
+
+	cnf.updateTransportServerMetricsLabels(tsEx, updatedStreamUpstreams)
+	if !reflect.DeepEqual(cnf.labelUpdater, expectedLabelUpdater) {
+		t.Errorf("updateTransportServerMetricsLabels() updated labels to \n%+v but expected \n%+v", cnf.labelUpdater, expectedLabelUpdater)
+	}
+
+	streamUpstreamServerLabels = map[string][]string{}
+	streamUpstreamServerPeerLabels = map[string][]string{}
+
+	expectedLabelUpdater = &mockLabelUpdater{
+		upstreamServerLabels:           map[string][]string{},
+		serverZoneLabels:               map[string][]string{},
+		upstreamServerPeerLabels:       map[string][]string{},
+		streamUpstreamServerPeerLabels: map[string][]string{},
+		streamUpstreamServerLabels:     map[string][]string{},
+		streamServerZoneLabels:         map[string][]string{},
+	}
+
+	cnf.deleteTransportServerMetricsLabels("default/test-transportserver")
+	if !reflect.DeepEqual(cnf.labelUpdater, expectedLabelUpdater) {
+		t.Errorf("deleteTransportServerMetricsLabels() updated labels to \n%+v but expected \n%+v", cnf.labelUpdater, expectedLabelUpdater)
 	}
 }
