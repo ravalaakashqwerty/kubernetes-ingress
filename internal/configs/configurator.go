@@ -150,22 +150,6 @@ func findRemovedKeys(currentKeys []string, newKeys map[string]bool) []string {
 	return removedKeys
 }
 
-func createUpstreamServerLabels(svcName string, resourceType string, resourceName string, resourceNamespace string) []string {
-	return []string{svcName, resourceType, resourceName, resourceNamespace}
-}
-
-func createStreamUpstreamServerLabels(svcName string, resourceType string, resourceName string, resourceNamespace string) []string {
-	return []string{svcName, resourceType, resourceName, resourceNamespace}
-}
-
-func createServerZoneLabels(resourceType string, resourceName string, resourceNamespace string) []string {
-	return []string{resourceType, resourceName, resourceNamespace}
-}
-
-func createStreamServerZoneLabels(resourceType string, resourceName string, resourceNamespace string) []string {
-	return []string{resourceType, resourceName, resourceNamespace}
-}
-
 func (cnf *Configurator) updateIngressMetricsLabels(ingEx *IngressEx, upstreams []version1.Upstream) {
 	upstreamServerLabels := make(map[string][]string)
 	newUpstreams := make(map[string]bool)
@@ -176,7 +160,7 @@ func (cnf *Configurator) updateIngressMetricsLabels(ingEx *IngressEx, upstreams 
 	var newPeersIPs []string
 
 	for _, u := range upstreams {
-		upstreamServerLabels[u.Name] = createUpstreamServerLabels(u.UpstreamLabels.Service, u.UpstreamLabels.ResourceType, u.UpstreamLabels.ResourceName, u.UpstreamLabels.ResourceNamespace)
+		upstreamServerLabels[u.Name] = []string{u.UpstreamLabels.Service, u.UpstreamLabels.ResourceType, u.UpstreamLabels.ResourceName, u.UpstreamLabels.ResourceNamespace}
 		newUpstreams[u.Name] = true
 		newUpstreamsNames = append(newUpstreamsNames, u.Name)
 		for _, server := range u.UpstreamServers {
@@ -214,7 +198,7 @@ func (cnf *Configurator) updateIngressMetricsLabels(ingEx *IngressEx, upstreams 
 		newZones := make(map[string]bool)
 		var newZonesNames []string
 		for _, rule := range ingEx.Ingress.Spec.Rules {
-			serverZoneLabels[rule.Host] = createServerZoneLabels("ingress", ingEx.Ingress.Name, ingEx.Ingress.Namespace)
+			serverZoneLabels[rule.Host] = []string{"ingress", ingEx.Ingress.Name, ingEx.Ingress.Namespace}
 			newZones[rule.Host] = true
 			newZonesNames = append(newZonesNames, rule.Host)
 		}
@@ -331,7 +315,7 @@ func (cnf *Configurator) updateVirtualServerMetricsLabels(virtualServerEx *Virtu
 	var newPeersIPs []string
 
 	for _, u := range upstreams {
-		labels[u.Name] = createUpstreamServerLabels(u.UpstreamLabels.Service, u.UpstreamLabels.ResourceType, u.UpstreamLabels.ResourceName, u.UpstreamLabels.ResourceNamespace)
+		labels[u.Name] = []string{u.UpstreamLabels.Service, u.UpstreamLabels.ResourceType, u.UpstreamLabels.ResourceName, u.UpstreamLabels.ResourceNamespace}
 		newUpstreams[u.Name] = true
 		newUpstreamsNames = append(newUpstreamsNames, u.Name)
 		for _, server := range u.Servers {
@@ -371,8 +355,8 @@ func (cnf *Configurator) updateVirtualServerMetricsLabels(virtualServerEx *Virtu
 		newZones := make(map[string]bool)
 		newZonesNames := []string{virtualServerEx.VirtualServer.Spec.Host}
 
-		serverZoneLabels[virtualServerEx.VirtualServer.Spec.Host] = createServerZoneLabels(
-			"virtualserver", virtualServerEx.VirtualServer.Name, virtualServerEx.VirtualServer.Namespace)
+		serverZoneLabels[virtualServerEx.VirtualServer.Spec.Host] = []string{
+			"virtualserver", virtualServerEx.VirtualServer.Name, virtualServerEx.VirtualServer.Namespace}
 
 		newZones[virtualServerEx.VirtualServer.Spec.Host] = true
 
@@ -478,7 +462,7 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 	var newPeersIPs []string
 
 	for _, u := range upstreams {
-		labels[u.Name] = createStreamUpstreamServerLabels(u.UpstreamLabels.Service, u.UpstreamLabels.ResourceType, u.UpstreamLabels.ResourceName, u.UpstreamLabels.ResourceNamespace)
+		labels[u.Name] = []string{u.UpstreamLabels.Service, u.UpstreamLabels.ResourceType, u.UpstreamLabels.ResourceName, u.UpstreamLabels.ResourceNamespace}
 		newUpstreams[u.Name] = true
 		newUpstreamsNames = append(newUpstreamsNames, u.Name)
 
@@ -510,8 +494,8 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 		newZones := make(map[string]bool)
 		newZonesNames := []string{transportServerEx.TransportServer.Spec.Host}
 
-		streamServerZoneLabels[transportServerEx.TransportServer.Spec.Host] = createStreamServerZoneLabels(
-			"transportserver", transportServerEx.TransportServer.Name, transportServerEx.TransportServer.Namespace)
+		streamServerZoneLabels[transportServerEx.TransportServer.Spec.Host] = []string{
+			"transportserver", transportServerEx.TransportServer.Name, transportServerEx.TransportServer.Namespace}
 
 		newZones[transportServerEx.TransportServer.Spec.Host] = true
 		removedZones := findRemovedKeys(cnf.metricLabelsIndex.transportServerServerZones[key], newZones)

@@ -491,22 +491,6 @@ func TestFindRemovedKeys(t *testing.T) {
 	}
 }
 
-func TestCreateUpstreamServerLabels(t *testing.T) {
-	expected := []string{"coffee-svc", "ingress", "cafe", "default"}
-	result := createUpstreamServerLabels("coffee-svc", "ingress", "cafe", "default")
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("createUpstreamServerLabels(%v, %v, %v, %v) returned %v but expected %v", "coffee-svc", "ingress", "cafe", "default", result, expected)
-	}
-}
-
-func TestCreateServerZoneLabels(t *testing.T) {
-	expected := []string{"ingress", "cafe", "default"}
-	result := createServerZoneLabels("ingress", "cafe", "default")
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("createServerZoneLabels(%v, %v, %v) returned %v but expected %v", "ingress", "cafe", "default", result, expected)
-	}
-}
-
 type mockLabelUpdater struct {
 	upstreamServerLabels           map[string][]string
 	serverZoneLabels               map[string][]string
