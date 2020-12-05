@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.0-experimental
-ARG GOLANG_CONTAINER=golang:latest
+ARG GOLANG_CONTAINER
 ARG NGINX_VERSION
 ARG BUILD_OS
 
@@ -10,8 +10,9 @@ ARG IC_VERSION
 LABEL version=$NGINX_VERSION-debian-$IC_VERSION
 LABEL maintainer="NGINX Docker Maintainers <docker-maint@nginx.com>"
 
-RUN  apt-get update \
-	&& apt-get install -y libcap2-bin
+RUN apt-get update \
+	&& apt-get install -y libcap2-bin \
+	&& rm -rf /var/lib/apt/lists/*
 
 
 ######### Base image for Alpine #########
@@ -21,10 +22,11 @@ ARG IC_VERSION
 LABEL version=$NGINX_VERSION-alpine-$IC_VERSION
 LABEL maintainer="NGINX Docker Maintainers <docker-maint@nginx.com>"
 
-RUN apk add --no-cache libcap
+RUN apk add --no-cache libcap \
+	&& rm -rf /var/cache/apk/*
 
 
-######### Base imager for Debian with NGINX Plus #########
+######### Base image for Debian with NGINX Plus #########
 FROM debian:buster-slim AS debian-plus
 ARG IC_VERSION
 ENV NGINX_PLUS_VERSION 22-1~buster
@@ -57,11 +59,12 @@ RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode
 	&& echo "Acquire::https::plus-pkgs.nginx.com::SslKey      \"/etc/ssl/nginx/nginx-repo.key\";" >> /etc/apt/apt.conf.d/90nginx \
 	&& echo "Acquire::https::plus-pkgs.nginx.com::User-Agent  \"k8s-ic-$IC_VERSION-apt\";" >> /etc/apt/apt.conf.d/90nginx \
 	&& printf "deb https://plus-pkgs.nginx.com/debian buster nginx-plus\n" > /etc/apt/sources.list.d/nginx-plus.list \
-	&& apt-get update && apt-get install -y nginx-plus=${NGINX_PLUS_VERSION}
+	&& apt-get update && apt-get install -y nginx-plus=${NGINX_PLUS_VERSION} \
+	&& rm -rf /var/lib/apt/lists/*
 
 
 ######### Base image for Debian with NGINX Plus and App Protect #########
-FROM debian-plus as debian-plus-ap
+FROM debian-plus as debian-plus-ap-intermediate
 ARG IC_VERSION
 LABEL version=debian-nginx-plus-ap-$IC_VERSION
 LABEL maintainer="NGINX Docker Maintainers <docker-maint@nginx.com>"
@@ -74,10 +77,11 @@ ENV APPPROTECT_SIG_VERSION 2020.09.03-1~stretch
 ENV APPPROTECT_THREAT_CAMPAIGNS_VERSION 2020.09.01-1~stretch
 ENV NGINX_PLUS_RELEASE R22
 
-RUN apt-get install --no-install-recommends --no-install-suggests -y wget
-
 RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode=0644 \
 	--mount=type=secret,id=nginx-repo.key,dst=/etc/ssl/nginx/nginx-repo.key,mode=0644 \
+	set -x \
+	&& apt-get update \
+	&& apt-get install --no-install-recommends --no-install-suggests -y wget \
 	&& sed -i '$ d' /etc/apt/apt.conf.d/90nginx \
 	&& echo "Acquire::https::plus-pkgs.nginx.com::User-Agent  \"k8s-ic-$IC_VERSION-app-$APPPROTECT_VERSION-apt\";" >> /etc/apt/apt.conf.d/90nginx \
 	&& echo "deb https://app-protect-sigs.nginx.com/debian/ stretch nginx-plus\n" | tee /etc/apt/sources.list.d/app-protect-sigs.list \
@@ -86,14 +90,15 @@ RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode
 	&& echo "Acquire::https::app-protect-sigs.nginx.com::Verify-Host \"true\";" >> /etc/apt/apt.conf.d/90app-protect-sigs \
 	&& echo "Acquire::https::app-protect-sigs.nginx.com::SslCert     \"/etc/ssl/nginx/nginx-repo.crt\";" >> /etc/apt/apt.conf.d/90app-protect-sigs \
 	&& echo "Acquire::https::app-protect-sigs.nginx.com::SslKey      \"/etc/ssl/nginx/nginx-repo.key\";" >> /etc/apt/apt.conf.d/90app-protect-sigs \
-	&& apt-get update && \
-	apt-get install -y nginx-plus-module-appprotect=$APPPROTECT_MODULE_VERSION \
+	&& apt-get install -y nginx-plus-module-appprotect=$APPPROTECT_MODULE_VERSION \
 	app-protect-plugin=$APPPROTECT_PLUGIN_VERSION \
 	app-protect-engine=$APPPROTECT_ENGINE_VERSION \
 	app-protect-compiler=$APPPROTECT_COMPILER_VERSION \
 	app-protect=$APPPROTECT_MODULE_VERSION \
 	&& apt-get install -y app-protect-attack-signatures${APPPROTECT_SIG_VERSION:+=$APPPROTECT_SIG_VERSION} \
-	&& apt-get install -y app-protect-threat-campaigns${APPPROTECT_THREAT_CAMPAIGNS_VERSION:+=$APPPROTECT_THREAT_CAMPAIGNS_VERSION}
+	&& apt-get install -y app-protect-threat-campaigns${APPPROTECT_THREAT_CAMPAIGNS_VERSION:+=$APPPROTECT_THREAT_CAMPAIGNS_VERSION} \
+	&& apt-get purge --auto-remove -y wget \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Uncomment the lines below if you want to install a custom CA certificate
 # COPY build/appprotect/*.crt  /usr/local/share/ca-certificates/
@@ -103,7 +108,6 @@ RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode
 ######### Base image for Openshift #########
 FROM registry.access.redhat.com/ubi8/ubi:8.3 AS openshift-base
 
-ARG NGINX_VERSION
 LABEL name="NGINX Ingress Controller" \
 	description="The Ingress controller is an application that runs in a cluster and configures an HTTP load balancer according to Ingress resources." \
 	summary="The Ingress controller is an application that runs in a cluster and configures an HTTP load balancer according to Ingress resources." \
@@ -122,6 +126,7 @@ COPY LICENSE /licenses
 
 ######### Base image for Openshift OSS #########
 FROM openshift-base AS openshift
+ARG NGINX_VERSION
 
 RUN echo "[nginx]" >> /etc/yum.repos.d/nginx.repo \
 	&& echo "name=nginx repo" >> /etc/yum.repos.d/nginx.repo \
@@ -162,7 +167,30 @@ RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/ssl/nginx/nginx-repo.crt,mode
 	&& echo "sslclientkey=/etc/ssl/nginx/nginx-repo.key" >> /etc/yum.repos.d/nginx-plus-8.repo \
 	&& echo "gpgcheck=1" >> /etc/yum.repos.d/nginx-plus-8.repo \
 	&& echo "enabled=1" >> /etc/yum.repos.d/nginx-plus-8.repo \
-	&& yum install -y nginx-plus-${NGINX_PLUS_VERSION}
+	&& yum install -y nginx-plus-${NGINX_PLUS_VERSION} \
+	&& yum remove -y wget \
+	&& rm /etc/yum.repos.d/nginx-plus-8.repo \
+	&& rm nginx_signing.key
+
+
+######### Cleanup for Debian wiht NGINX Plus and App Protect #########
+FROM debian-plus-ap-intermediate as debian-plus-ap
+RUN rm /etc/apt/apt.conf.d/90app-protect-sigs /etc/apt/sources.list.d/app-protect-sigs.list \
+	&& mkdir -p /etc/nginx/waf /etc/nginx/waf/nac-policies /etc/nginx/waf/nac-logconfs var/log/app_protect /opt/app_protect \
+	&& chown -R nginx:0 /etc/app_protect /usr/share/ts /var/log/app_protect/ /opt/app_protect/ nginx:0 /var/log/nginx/
+
+RUN printf "MODULE = ALL;\nLOG_LEVEL = TS_CRIT;\nFILE = 2;\n" > /etc/app_protect/bd/logger.cfg \
+	&& printf "[config_set_compiler]\nlog_level=fatal\n" >> /etc/app_protect/tools/asm_logging.conf \
+	&& for v in \
+	asm_config_server \
+	lock_factory \
+	bd_agent \
+	import_export_policy \
+	set_active \
+	; do sed -i "/\[$v/a log_level=fatal" "/etc/app_protect/tools/asm_logging.conf" \
+	; done
+
+COPY --chown=nginx:0 build/log-default.json /etc/nginx
 
 
 ######### Create common files, permissions and setcap #########
@@ -170,14 +198,9 @@ FROM $BUILD_OS as files
 
 ARG PLUS
 
-RUN mkdir -p /var/lib/nginx \
-	&& mkdir -p /etc/nginx/secrets \
-	&& mkdir -p /etc/nginx/stream-conf.d \
-	&& setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
-	'cap_net_bind_service=+ep' /usr/sbin/nginx-debug \
-	&& chown -R nginx:0 /etc/nginx \
-	&& chown -R nginx:0 /var/cache/nginx \
-	&& chown -R nginx:0 /var/lib/nginx \
+RUN mkdir -p /var/lib/nginx /etc/nginx/secrets /etc/nginx/stream-conf.d \
+	&& setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx 'cap_net_bind_service=+ep' /usr/sbin/nginx-debug \
+	&& chown -R nginx:0 /etc/nginx /var/cache/nginx /var/lib/nginx \
 	&& rm /etc/nginx/conf.d/*
 
 COPY internal/configs/version1/nginx$PLUS.ingress.tmpl \
@@ -194,68 +217,6 @@ EXPOSE 80 443
 ENTRYPOINT ["/nginx-ingress"]
 
 
-######### Cleanup for Debian #########
-FROM files as cleanup-debian
-RUN apt-get remove --purge -y libcap2-bin \
-	&& rm -rf /var/lib/apt/lists/*
-
-
-######### Cleanup for Alpine #########
-FROM files as cleanup-alpine
-RUN apk del libcap \
-	&& rm -rf /var/cache/apk/*
-
-
-######### Cleanup for Debian wiht NGINX Plus #########
-FROM files as cleanup-debian-plus
-RUN apt-get remove --purge --auto-remove -y gnupg1 libcap2-bin \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& rm -rf /etc/ssl/nginx \
-	&& rm /etc/apt/apt.conf.d/90nginx /etc/apt/sources.list.d/nginx-plus.list
-
-
-######### Cleanup for Debian wiht NGINX Plus and App Protect #########
-FROM cleanup-debian-plus as cleanup-debian-plus-ap
-RUN apt-get remove --purge --auto-remove -y wget \
-	&& rm /etc/apt/apt.conf.d/90app-protect-sigs /etc/apt/sources.list.d/app-protect-sigs.list \
-	&& mkdir -p /etc/nginx/waf \
-	&& mkdir -p /etc/nginx/waf/nac-policies \
-	&& mkdir -p /etc/nginx/waf/nac-logconfs \
-	&& mkdir -p /var/log/app_protect \
-	&& mkdir -p /opt/app_protect \
-	&& chown -R nginx:0 /etc/app_protect \
-	&& chown -R nginx:0 /usr/share/ts \
-	&& chown -R nginx:0 /var/log/app_protect/ \
-	&& chown -R nginx:0 /opt/app_protect/ \
-	&& chown -R nginx:0 /var/log/nginx/
-
-RUN printf "MODULE = ALL;\nLOG_LEVEL = TS_CRIT;\nFILE = 2;\n" > /etc/app_protect/bd/logger.cfg \
-	&&  printf "[config_set_compiler]\nlog_level=fatal\n" >> /etc/app_protect/tools/asm_logging.conf \
-	&& for v in \
-	asm_config_server \
-	lock_factory \
-	bd_agent \
-	import_export_policy \
-	set_active \
-	; do sed -i "/\[$v/a log_level=fatal" "/etc/app_protect/tools/asm_logging.conf" \
-	; done
-
-COPY --chown=nginx:0 build/log-default.json /etc/nginx
-
-
-######### Cleanup for Openshift #########
-FROM files as cleanup-openshift
-RUN rm /etc/yum.repos.d/nginx.repo
-
-
-######### Cleanup for Openshift with NGINX Plus #########
-FROM files as cleanup-openshift-plus
-RUN yum remove -y wget \
-	&& rm -rf /etc/ssl/nginx \
-	&& rm /etc/yum.repos.d/nginx-plus-8.repo \
-	&& rm nginx_signing.key
-
-
 ######### Build nginx-ingress in golang container #########
 FROM $GOLANG_CONTAINER AS builder
 ARG VERSION
@@ -267,13 +228,13 @@ RUN CGO_ENABLED=0 GOFLAGS='-mod=vendor' \
 
 
 ######### Create image with nginx-ingress built in container
-FROM cleanup-$BUILD_OS AS container
+FROM files AS container
 COPY --from=builder /nginx-ingress /
 
 USER nginx
 
 ######### Create image with nginx-ingress built locally #########
-FROM cleanup-$BUILD_OS AS local
+FROM files AS local
 COPY nginx-ingress /
 
 USER nginx
