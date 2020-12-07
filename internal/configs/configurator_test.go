@@ -562,7 +562,7 @@ func (u *mockLabelUpdater) UpdateStreamUpstreamServerLabels(streamUpstreamServer
 
 // DeleteStreamUpstreamServerLabels deletes the Stream Upstream Server Labels
 func (u *mockLabelUpdater) DeleteStreamUpstreamServerLabels(streamUpstreamServerNames []string) {
-	for _, k := range streamUpstreamNames {
+	for _, k := range streamUpstreamServerNames {
 		delete(u.streamUpstreamServerLabels, k)
 	}
 }
