@@ -13,7 +13,7 @@ const nginxNonExistingUnixSocket = "unix:/var/lib/nginx/non-existing-unix-socket
 type TransportServerEx struct {
 	TransportServer *conf_v1alpha1.TransportServer
 	Endpoints       map[string][]string
-	PodsByIP        map[string]PodInfo
+	PodsByIP        map[string]string
 }
 
 func (tsEx *TransportServerEx) String() string {

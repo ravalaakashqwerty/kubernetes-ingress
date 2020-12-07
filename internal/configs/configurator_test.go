@@ -1008,9 +1008,9 @@ func TestUpdateTransportServerMetricsLabels(t *testing.T) {
 				Host: "example.com",
 			},
 		},
-		PodsByIP: map[string]PodInfo{
-			"10.0.0.1:80": {Name: "pod-1"},
-			"10.0.0.2:80": {Name: "pod-2"},
+		PodsByIP: map[string]string{
+			"10.0.0.1:80": "pod-1",
+			"10.0.0.2:80": "pod-2",
 		},
 	}
 

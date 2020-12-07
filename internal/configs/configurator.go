@@ -467,9 +467,9 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 		newUpstreamsNames = append(newUpstreamsNames, u.Name)
 
 		for _, server := range u.Servers {
-			podInfo := transportServerEx.PodsByIP[server.Address]
+			podName := transportServerEx.PodsByIP[server.Address]
 			labelKey := fmt.Sprintf("%v/%v", u.Name, server.Address)
-			upstreamServerPeerLabels[labelKey] = []string{podInfo.Name}
+			upstreamServerPeerLabels[labelKey] = []string{podName}
 
 			newPeers[labelKey] = true
 			newPeersIPs = append(newPeersIPs, labelKey)

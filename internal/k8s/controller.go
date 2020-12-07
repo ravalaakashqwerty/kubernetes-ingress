@@ -2312,7 +2312,7 @@ func findPoliciesForSecret(policies []*conf_v1alpha1.Policy, secretNamespace str
 
 func (lbc *LoadBalancerController) createTransportServer(transportServer *conf_v1alpha1.TransportServer) *configs.TransportServerEx {
 	endpoints := make(map[string][]string)
-	podsByIP := make(map[string]configs.PodInfo)
+	podsByIP := make(map[string]string)
 
 	for _, u := range transportServer.Spec.Upstreams {
 		podEndps, external, err := lbc.getEndpointsForUpstream(transportServer.Namespace, u.Service, uint16(u.Port))
@@ -2332,9 +2332,7 @@ func (lbc *LoadBalancerController) createTransportServer(transportServer *conf_v
 
 		if lbc.isNginxPlus && lbc.isPrometheusEnabled {
 			for _, endpoint := range podEndps {
-				podsByIP[endpoint.Address] = configs.PodInfo{
-					Name: endpoint.PodName,
-				}
+				podsByIP[endpoint.Address] = endpoint.PodName
 			}
 		}
 	}
