@@ -484,29 +484,27 @@ func (cnf *Configurator) updateTransportServerMetricsLabels(transportServerEx *T
 	removedUpstreams := findRemovedKeys(cnf.metricLabelsIndex.transportServerUpstreams[key], newUpstreams)
 	cnf.metricLabelsIndex.transportServerUpstreams[key] = newUpstreamsNames
 
-	if cnf.isPlus {
-		cnf.labelUpdater.UpdateStreamUpstreamServerPeerLabels(upstreamServerPeerLabels)
-		cnf.labelUpdater.DeleteStreamUpstreamServerPeerLabels(removedPeers)
-		cnf.labelUpdater.UpdateStreamUpstreamServerLabels(labels)
-		cnf.labelUpdater.DeleteStreamUpstreamServerLabels(removedUpstreams)
+	cnf.labelUpdater.UpdateStreamUpstreamServerPeerLabels(upstreamServerPeerLabels)
+	cnf.labelUpdater.DeleteStreamUpstreamServerPeerLabels(removedPeers)
+	cnf.labelUpdater.UpdateStreamUpstreamServerLabels(labels)
+	cnf.labelUpdater.DeleteStreamUpstreamServerLabels(removedUpstreams)
 
-		streamServerZoneLabels := make(map[string][]string)
-		newZones := make(map[string]bool)
-		newZonesNames := []string{transportServerEx.TransportServer.Spec.Host}
+	streamServerZoneLabels := make(map[string][]string)
+	newZones := make(map[string]bool)
+	newZonesNames := []string{transportServerEx.TransportServer.Spec.Listener.Name}
 
-		streamServerZoneLabels[transportServerEx.TransportServer.Spec.Host] = []string{
-			"transportserver", transportServerEx.TransportServer.Name, transportServerEx.TransportServer.Namespace}
+	streamServerZoneLabels[transportServerEx.TransportServer.Spec.Listener.Name] = []string{
+		"transportserver", transportServerEx.TransportServer.Name, transportServerEx.TransportServer.Namespace}
 
-		newZones[transportServerEx.TransportServer.Spec.Host] = true
-		removedZones := findRemovedKeys(cnf.metricLabelsIndex.transportServerServerZones[key], newZones)
-		cnf.metricLabelsIndex.transportServerServerZones[key] = newZonesNames
-		cnf.labelUpdater.UpdateStreamServerZoneLabels(streamServerZoneLabels)
-		cnf.labelUpdater.DeleteStreamServerZoneLabels(removedZones)
-	}
+	newZones[transportServerEx.TransportServer.Spec.Listener.Name] = true
+	removedZones := findRemovedKeys(cnf.metricLabelsIndex.transportServerServerZones[key], newZones)
+	cnf.metricLabelsIndex.transportServerServerZones[key] = newZonesNames
+	cnf.labelUpdater.UpdateStreamServerZoneLabels(streamServerZoneLabels)
+	cnf.labelUpdater.DeleteStreamServerZoneLabels(removedZones)
+
 }
 
 func (cnf *Configurator) deleteTransportServerMetricsLabels(key string) {
-
 	cnf.labelUpdater.DeleteStreamUpstreamServerLabels(cnf.metricLabelsIndex.transportServerUpstreams[key])
 	cnf.labelUpdater.DeleteStreamServerZoneLabels(cnf.metricLabelsIndex.transportServerServerZones[key])
 	cnf.labelUpdater.DeleteStreamUpstreamServerPeerLabels(cnf.metricLabelsIndex.transportServerUpstreamPeers[key])
@@ -902,6 +900,10 @@ func (cnf *Configurator) DeleteVirtualServer(key string) error {
 
 // DeleteTransportServer deletes NGINX configuration for the TransportServer resource.
 func (cnf *Configurator) DeleteTransportServer(key string) error {
+	if cnf.isPlus && cnf.isPrometheusEnabled {
+		cnf.deleteTransportServerMetricsLabels(fmt.Sprintf(key))
+	}
+
 	err := cnf.deleteTransportServer(key)
 	if err != nil {
 		return fmt.Errorf("Error when removing TransportServer %v: %v", key, err)
@@ -910,9 +912,6 @@ func (cnf *Configurator) DeleteTransportServer(key string) error {
 	err = cnf.nginxManager.Reload(nginx.ReloadForOtherUpdate)
 	if err != nil {
 		return fmt.Errorf("Error when removing TransportServer %v: %v", key, err)
-	}
-	if cnf.isPlus && cnf.isPrometheusEnabled {
-		cnf.deleteTransportServerMetricsLabels(fmt.Sprintf(key))
 	}
 
 	return nil

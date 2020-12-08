@@ -39,6 +39,12 @@ func generateTransportServerConfig(transportServerEx *TransportServerEx, listene
 		proxyRequests = transportServerEx.TransportServer.Spec.UpstreamParameters.UDPRequests
 		proxyResponses = transportServerEx.TransportServer.Spec.UpstreamParameters.UDPResponses
 	}
+	statusZone := ""
+	if transportServerEx.TransportServer.Spec.Listener.Name == conf_v1alpha1.TLSPassthroughListenerName {
+		statusZone = transportServerEx.TransportServer.Spec.Host
+	} else {
+		statusZone = transportServerEx.TransportServer.Spec.Listener.Name
+	}
 
 	return version2.TransportServerConfig{
 		Server: version2.StreamServer{
@@ -46,7 +52,7 @@ func generateTransportServerConfig(transportServerEx *TransportServerEx, listene
 			UnixSocket:     generateUnixSocket(transportServerEx),
 			Port:           listenerPort,
 			UDP:            transportServerEx.TransportServer.Spec.Listener.Protocol == "UDP",
-			StatusZone:     transportServerEx.TransportServer.Spec.Listener.Name,
+			StatusZone:     statusZone,
 			ProxyRequests:  proxyRequests,
 			ProxyResponses: proxyResponses,
 			ProxyPass:      upstreamNamer.GetNameForUpstream(transportServerEx.TransportServer.Spec.Action.Pass),
